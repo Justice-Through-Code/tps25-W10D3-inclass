@@ -1,3 +1,16 @@
+import tkinter as tk
+from tkinter import ttk, filedialog, messagebox
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
+import json
+from dataclasses import dataclass
+from typing import List, Dict, Optional
+import threading
+import queue
+import joblib
+import os
+
 class WeatherAlertSystem:
     """Manages weather alerts and notifications"""
     
@@ -134,8 +147,8 @@ class AlertWidget(ttk.Frame):
         
         if not self.alert_widgets:
             self.no_alerts_label.pack(pady=20)
-Location-Based Features:
-python
+# Location-Based Features:
+# python
 class LocationManager:
     """Manages location services"""
     
@@ -275,8 +288,8 @@ class LocationSelector(ttk.Frame):
             
         ttk.Button(button_frame, text="Save", command=save_location).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Cancel", command=dialog.destroy).pack(side='left')
-Export and Sharing Features:
-python
+# Export and Sharing Features:
+# python
 class ExportManager:
     """Handles data export and sharing"""
     
@@ -502,17 +515,17 @@ class ExportDialog:
                 
                 csv_file = self.export_manager.export_data_csv()
                 zipf.write(csv_file, "forecast_data.csv")
-Continue
-Edit
-python
-              os.remove(csv_file)
+# Continue
+# Edit
+# python
+                os.remove(csv_file)
                
                # Write report
-               report = self.export_manager.generate_report()
-               report_file = "forecast_report.txt"
-               with open(report_file, 'w') as f:
+            report = self.export_manager.generate_report()
+            report_file = "forecast_report.txt"
+            with open(report_file, 'w') as f:
                    f.write(report)
-               zipf.write(report_file, report_file)
-               os.remove(report_file)
+            zipf.write(report_file, report_file)
+            os.remove(report_file)
            
-           messagebox.showinfo("Success", f"Complete package saved to {zip_filename}")
+        messagebox.showinfo("Success", f"Complete package saved to {zip_filename}")

@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, filedialog, messagebox
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -8,8 +8,11 @@ from dataclasses import dataclass
 from typing import List, Dict, Optional
 import threading
 import queue
+import joblib
+import os
 
 @dataclass
+# Defines a structured record for current weather conditions (temp, humidity, etc.).
 class WeatherData:
     """Data class for weather information"""
     timestamp: datetime
@@ -21,6 +24,7 @@ class WeatherData:
     conditions: str
     
 @dataclass
+# Defines a record for predicted future weather, including confidence and temperature range.
 class Forecast:
     """Data class for weather forecast"""
     timestamp: datetime
@@ -33,6 +37,7 @@ class Forecast:
     confidence: float
 
 class WeatherDataManager:
+    
     """Manages weather data collection and storage"""
     
     def __init__(self):
@@ -43,7 +48,7 @@ class WeatherDataManager:
         
     def fetch_current_weather(self) -> Optional[WeatherData]:
         """Fetch current weather data"""
-        # Simulate API call
+        # Simulate API call using np.random to generate weather data
         try:
             current = WeatherData(
                 timestamp=datetime.now(),
@@ -66,7 +71,7 @@ class WeatherDataManager:
         end_time = datetime.now()
         start_time = end_time - timedelta(hours=hours)
         
-        # Simulate historical data
+        # Simulate historical data for plotting trends over the past 24 hours
         timestamps = pd.date_range(start=start_time, end=end_time, freq='H')
         data = {
             'timestamp': timestamps,
@@ -81,6 +86,7 @@ class WeatherDataManager:
 
 class PredictionEngine:
     """Handles all prediction operations"""
+    # Handles forcasting using ensemble modeling
     
     def __init__(self, models: Dict):
         self.models = models
@@ -89,7 +95,8 @@ class PredictionEngine:
     def predict_ensemble(self, features: pd.DataFrame, horizon: int) -> List[Forecast]:
         """Make ensemble predictions"""
         predictions = []
-        
+        # Generates fake predictions using multiple “models” (linear, rf, arima) 
+        # and combines them with weighted averaging. Includes simulated confidence based on variance.
         for i in range(horizon):
             # Get predictions from each model
             model_predictions = {}

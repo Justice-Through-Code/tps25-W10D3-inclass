@@ -90,28 +90,44 @@ class PredictionEngine:
         
     def predict_ensemble(self, features: pd.DataFrame, horizon: int) -> List[Forecast]:
         """Make ensemble predictions"""
-        predictions = []
+        # predictions = []
+        model_predictions = {}
         
-        for i in range(horizon):
-            # Get predictions from each model
-            model_predictions = {}
+        # for i in range(horizon):
+        #     # Get predictions from each model
+        #     model_predictions = {}
             
-            for name, model in self.models.items():
-                if name in self.ensemble_weights:
-                    # Make prediction (simplified)
-                    pred = 70 + 10 * np.sin((i + 12) * np.pi / 12) + np.random.normal(0, 2)
-                    model_predictions[name] = pred
+        #     for name, model in self.models.items():
+        #         if name in self.ensemble_weights:
+        #             # Make prediction (simplified)
+        #             pred = 70 + 10 * np.sin((i + 12) * np.pi / 12) + np.random.normal(0, 2)
+        #             model_predictions[name] = pred
             
-            # Weighted average
+        #     # Weighted average
+        #     ensemble_pred = sum(
+        #         self.ensemble_weights[name] * pred 
+        #         for name, pred in model_predictions.items()
+        #     )
+            
+        #     # Calculate confidence (simplified)
+        #     variance = np.var(list(model_predictions.values()))
+        #     confidence = max(0.5, 1 - variance / 10)
+        for name, model in self.models.items():
+            if name in self.ensemble_weights:
+                pred = 70 + 10 * np.sin((i + 12) * np.pi / 12) + np.random.normal(0, 2)
+                model_predictions[name] = pred
+
+    # If no model predictions, fall back to default
+        if not model_predictions:
+            ensemble_pred = 70 + 10 * np.sin((i + 12) * np.pi / 12) + np.random.normal(0, 2)
+            confidence = 0.75
+        else:
             ensemble_pred = sum(
                 self.ensemble_weights[name] * pred 
                 for name, pred in model_predictions.items()
             )
-            
-            # Calculate confidence (simplified)
             variance = np.var(list(model_predictions.values()))
             confidence = max(0.5, 1 - variance / 10)
-            
             # Create forecast
             forecast = Forecast(
                 timestamp=datetime.now() + timedelta(hours=i),
@@ -124,9 +140,9 @@ class PredictionEngine:
                 confidence=confidence
             )
             
-            predictions.append(forecast)
+            model_predictions.append(forecast)
         
-        return predictions
+        return model_predictions
 
 class WeatherPredictorApp:
     """Main application class"""
@@ -417,6 +433,121 @@ class WeatherPredictorApp:
         
         # Update scroll region
         self.forecast_canvas.configure(scrollregion=self.forecast_canvas.bbox('all'))
+
+    def show_daily_forecast(self):
+        """Display hourly forecast"""
+        # Clear canvas
+        self.forecast_canvas.delete('all')
+        
+        # Get predictions
+        forecasts = self.prediction_engine.predict_ensemble(None, 24)
+        
+        # Display parameters
+        card_width = 80
+        card_height = 250
+        card_spacing = 10
+        y_offset = 10
+        
+        # Create forecast cards
+        for i, forecast in enumerate(forecasts[:24]):  # 24 hours
+            x = i * (card_width + card_spacing) + card_spacing
+            
+            # Card background
+            self.forecast_canvas.create_rectangle(
+                x, y_offset, x + card_width, y_offset + card_height,
+                fill='white', outline='#ddd'
+            )
+            
+            # Time
+            time_text = forecast.timestamp.strftime('%I %p')
+            self.forecast_canvas.create_text(
+                x + card_width/2, y_offset + 20,
+                text=time_text, font=('Arial', 10, 'bold')
+            )
+            
+            # Temperature
+            self.forecast_canvas.create_text(
+                x + card_width/2, y_offset + 60,
+                text=f"{forecast.temperature:.0f}°",
+                font=('Arial', 16, 'bold'), fill=self.colors['primary']
+            )
+            
+            # Confidence bar
+            conf_height = forecast.confidence * 100
+            self.forecast_canvas.create_rectangle(
+                x + 10, y_offset + 100,
+                x + 20, y_offset + 100 + conf_height,
+                fill=self.colors['success'], outline=''
+            )
+            
+            # Precipitation chance
+            if forecast.precipitation_chance > 0.1:
+                self.forecast_canvas.create_text(
+                    x + card_width/2, y_offset + 180,
+                    text=f"{forecast.precipitation_chance:.0%}",
+                    font=('Arial', 10), fill=self.colors['primary']
+                )
+        
+        # Update scroll region
+        self.forecast_canvas.configure(scrollregion=self.forecast_canvas.bbox('all'))
+
+    def show_weekly_forecast(self):
+        """Display hourly forecast"""
+        # Clear canvas
+        self.forecast_canvas.delete('all')
+        
+        # Get predictions
+        forecasts = self.prediction_engine.predict_ensemble(None, 24)
+        print(forecasts[0].temperature)
+        
+        # Display parameters
+        card_width = 80
+        card_height = 250
+        card_spacing = 10
+        y_offset = 10
+        
+        # Create forecast cards
+        for i, forecast in enumerate(forecasts[:24]):  # 24 hours
+            x = i * (card_width + card_spacing) + card_spacing
+            
+            # Card background
+            self.forecast_canvas.create_rectangle(
+                x, y_offset, x + card_width, y_offset + card_height,
+                fill='white', outline='#ddd'
+            )
+            
+            # Time
+            time_text = forecast.timestamp.strftime('%I %p')
+            self.forecast_canvas.create_text(
+                x + card_width/2, y_offset + 20,
+                text=time_text, font=('Arial', 10, 'bold')
+            )
+            
+            # Temperature
+            self.forecast_canvas.create_text(
+                x + card_width/2, y_offset + 60,
+                text=f"{forecast.temperature:.0f}°",
+                font=('Arial', 16, 'bold'), fill=self.colors['primary']
+            )
+            
+            # Confidence bar
+            conf_height = forecast.confidence * 100
+            self.forecast_canvas.create_rectangle(
+                x + 10, y_offset + 100,
+                x + 20, y_offset + 100 + conf_height,
+                fill=self.colors['success'], outline=''
+            )
+            
+            # Precipitation chance
+            if forecast.precipitation_chance > 0.1:
+                self.forecast_canvas.create_text(
+                    x + card_width/2, y_offset + 180,
+                    text=f"{forecast.precipitation_chance:.0%}",
+                    font=('Arial', 10), fill=self.colors['primary']
+                )
+        
+        # Update scroll region
+        self.forecast_canvas.configure(scrollregion=self.forecast_canvas.bbox('all'))
     
     def update_charts(self):
         """Update trend charts"""
@@ -531,7 +662,6 @@ class SettingsDialog:
         # Apply settings to app
         # ...
         self.dialog.destroy()
-
 
 class WeatherAlertSystem:
     """Manages weather alerts and notifications"""
@@ -1037,10 +1167,10 @@ class ExportDialog:
                 
                 csv_file = self.export_manager.export_data_csv()
                 zipf.write(csv_file, "forecast_data.csv")
-#                 Continue
+# Continue
 # Edit
 # python
-#               os.remove(csv_file)
+                os.remove(csv_file)
                
                # Write report
             report = self.export_manager.generate_report()
@@ -1052,541 +1182,7 @@ class ExportDialog:
            
         messagebox.showinfo("Success", f"Complete package saved to {zip_filename}")
 
-
-
-class PerformanceOptimizer:
-    """Optimizes application performance"""
-    
-    def __init__(self, app):
-        self.app = app
-        self.cache = {}
-        self.last_update = {}
-        
-    def cache_prediction(self, key, data, ttl=300):
-        """Cache prediction data with time-to-live"""
-        self.cache[key] = {
-            'data': data,
-            'expires': datetime.now() + timedelta(seconds=ttl)
-        }
-        
-    def get_cached_prediction(self, key):
-        """Get cached prediction if valid"""
-        if key in self.cache:
-            cached = self.cache[key]
-            if datetime.now() < cached['expires']:
-                return cached['data']
-            else:
-                del self.cache[key]
-        return None
-    
-    def should_update(self, component, min_interval=60):
-        """Check if component should update"""
-        last = self.last_update.get(component, datetime.min)
-        if (datetime.now() - last).seconds >= min_interval:
-            self.last_update[component] = datetime.now()
-            return True
-        return False
-    
-    def optimize_chart_updates(self, chart_func):
-        """Decorator to optimize chart updates"""
-        def wrapper(*args, **kwargs):
-            if self.should_update('chart', min_interval=30):
-                return chart_func(*args, **kwargs)
-        return wrapper
-# Smooth Animations and Transitions:
-# python
-class AnimationManager:
-    """Manages UI animations"""
-    
-    def __init__(self, root):
-        self.root = root
-        self.animations = []
-        
-    def fade_in(self, widget, duration=500, callback=None):
-        """Fade in animation"""
-        widget.configure(alpha=0)  # Custom attribute
-        steps = 20
-        delay = duration // steps
-        
-        def animate(step=0):
-            if step <= steps:
-                alpha = step / steps
-                # Simulate fade with color interpolation
-                widget.configure(alpha=alpha)
-                self.root.after(delay, lambda: animate(step + 1))
-            elif callback:
-                callback()
-                
-        animate()
-        
-    def slide_in(self, widget, direction='left', duration=300):
-        """Slide in animation"""
-        # Get widget dimensions
-        widget.update_idletasks()
-        width = widget.winfo_width()
-        height = widget.winfo_height()
-        
-        # Starting position
-        if direction == 'left':
-            start_x = -width
-            end_x = 0
-        elif direction == 'right':
-            start_x = self.root.winfo_width()
-            end_x = self.root.winfo_width() - width
-            
-        steps = 20
-        delay = duration // steps
-        
-        def animate(step=0):
-            if step <= steps:
-                progress = step / steps
-                # Ease-out curve
-                progress = 1 - (1 - progress) ** 3
-                
-                x = start_x + (end_x - start_x) * progress
-                widget.place(x=x, y=widget.winfo_y())
-                
-                self.root.after(delay, lambda: animate(step + 1))
-                
-        animate()
-    
-    def pulse(self, widget, duration=1000):
-        """Pulse animation for alerts"""
-        original_bg = widget.cget('background')
-        
-        def pulse_step(step=0):
-            if step < 10:
-                # Calculate intensity
-                intensity = abs(5 - step) / 5
-                # Interpolate color
-                widget.configure(background=self._interpolate_color(
-                    original_bg, '#ff0000', intensity
-                ))
-                self.root.after(duration // 10, lambda: pulse_step(step + 1))
-            else:
-                widget.configure(background=original_bg)
-                
-        pulse_step()
-    
-    def _interpolate_color(self, color1, color2, factor):
-        """Interpolate between two colors"""
-        # Simplified color interpolation
-        return color1  # Placeholder
-
-class ModernWeatherUI:
-    """Modern UI enhancements"""
-    
-    def __init__(self, app):
-        self.app = app
-        self.setup_modern_ui()
-        
-    def setup_modern_ui(self):
-        """Apply modern UI enhancements"""
-        # Custom fonts
-        self.fonts = {
-            'heading': ('Segoe UI', 24, 'bold'),
-            'subheading': ('Segoe UI', 16),
-            'body': ('Segoe UI', 12),
-            'small': ('Segoe UI', 10)
-        }
-        
-        # Color scheme
-        self.colors = {
-            'bg_primary': '#1e1e1e',
-            'bg_secondary': '#2d2d2d',
-            'accent': '#0078d4',
-            'text_primary': '#ffffff',
-            'text_secondary': '#b0b0b0',
-            'success': '#107c10',
-            'warning': '#ff8c00',
-            'error': '#d13438'
-        }
-        
-        # Apply dark theme
-        self.apply_dark_theme()
-        
-    def apply_dark_theme(self):
-        """Apply dark theme to application"""
-        style = ttk.Style()
-        
-        # Configure dark theme
-        style.theme_use('clam')
-        
-        style.configure('Dark.TFrame', background=self.colors['bg_primary'])
-        style.configure('Dark.TLabel', 
-                       background=self.colors['bg_primary'],
-                       foreground=self.colors['text_primary'])
-        style.configure('Dark.TButton',
-                       background=self.colors['accent'],
-                       foreground=self.colors['text_primary'],
-                       borderwidth=0,
-                       focuscolor='none')
-        
-        # Hover effects
-        style.map('Dark.TButton',
-                 background=[('active', self.colors['accent']),
-                           ('pressed', self.colors['bg_secondary'])])
-    
-    def create_modern_card(self, parent, title, content):
-        """Create modern card widget"""
-        card = tk.Frame(parent, bg=self.colors['bg_secondary'],
-                       highlightbackground=self.colors['accent'],
-                       highlightthickness=1)
-        
-        # Title
-        title_label = tk.Label(card, text=title,
-                             font=self.fonts['subheading'],
-                             bg=self.colors['bg_secondary'],
-                             fg=self.colors['text_primary'])
-        title_label.pack(anchor='w', padx=20, pady=(15, 5))
-        
-        # Content
-        content_frame = tk.Frame(card, bg=self.colors['bg_secondary'])
-        content_frame.pack(fill='both', expand=True, padx=20, pady=(0, 15))
-        
-        return content_frame
-# Error Handling and Recovery:
-# python
-class ErrorHandler:
-    """Comprehensive error handling"""
-    
-    def __init__(self, app):
-        self.app = app
-        self.error_log = []
-        
-    def handle_error(self, error, context="", severity="ERROR"):
-        """Handle application errors"""
-        # Log error
-        error_entry = {
-            'timestamp': datetime.now(),
-            'error': str(error),
-            'context': context,
-            'severity': severity,
-            'type': type(error).__name__
-        }
-        self.error_log.append(error_entry)
-        
-        # Determine action based on severity
-        if severity == "CRITICAL":
-            self.show_critical_error(error, context)
-        elif severity == "ERROR":
-            self.show_error_notification(error, context)
-        else:  # WARNING or INFO
-            self.log_warning(error, context)
-            
-    def show_critical_error(self, error, context):
-        """Show critical error dialog"""
-        message = f"A critical error occurred in {context}:\n\n{str(error)}\n\nThe application may need to restart."
-        
-        messagebox.showerror("Critical Error", message)
-        
-        # Attempt recovery
-        self.attempt_recovery(context)
-        
-    def show_error_notification(self, error, context):
-        """Show non-critical error notification"""
-        # Create toast notification
-        toast = tk.Toplevel(self.app.root)
-        toast.wm_overrideredirect(True)
-        
-        # Position in bottom right
-        toast.geometry("+{}+{}".format(
-            self.app.root.winfo_x() + self.app.root.winfo_width() - 300,
-            self.app.root.winfo_y() + self.app.root.winfo_height() - 100
-        ))
-        
-        # Error message
-        frame = tk.Frame(toast, bg='#d13438', padx=10, pady=10)
-        frame.pack()
-        
-        tk.Label(frame, text=f"Error in {context}",
-                fg='white', bg='#d13438',
-                font=('Arial', 10, 'bold')).pack(anchor='w')
-        
-        tk.Label(frame, text=str(error)[:50] + "...",
-                fg='white', bg='#d13438',
-                font=('Arial', 9)).pack(anchor='w')
-        
-        # Auto-close after 5 seconds
-        toast.after(5000, toast.destroy)
-        
-    def attempt_recovery(self, context):
-        """Attempt to recover from critical error"""
-        recovery_actions = {
-            'data_fetch': self.recover_data_fetch,
-            'prediction': self.recover_prediction,
-            'ui_update': self.recover_ui_update
-        }
-        
-        if context in recovery_actions:
-            recovery_actions[context]()
-        else:
-            # Generic recovery
-            self.app.reset_to_safe_state()
-            
-    def recover_data_fetch(self):
-        """Recover from data fetch error"""
-        # Use cached data
-        self.app.use_cached_data = True
-        self.app.status_label.config(text="Using cached data")
-        
-    def with_error_handling(self, context):
-        """Decorator for error handling"""
-        def decorator(func):
-            def wrapper(*args, **kwargs):
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    self.handle_error(e, context)
-                    return None
-            return wrapper
-        return decorator
-# Final Complete Application:
-# python
-class WeatherPredictorPro:
-    """Production-ready weather predictor"""
-    
-    def __init__(self):
-        self.root = tk.Tk()
-        self.root.title("Weather Predictor Pro")
-        self.root.geometry("1200x800")
-        
-        # Initialize components
-        self.setup_components()
-        
-        # Apply modern UI
-        self.modern_ui = ModernWeatherUI(self)
-        
-        # Start application
-        self.initialize()
-
-        # self.update_forecast_display()
-        
-    def setup_components(self):
-        """Initialize all components"""
-        self.data_manager = WeatherDataManager()
-        self.prediction_engine = PredictionEngine(self.load_models())
-        self.alert_system = WeatherAlertSystem()
-        self.location_manager = LocationManager()
-        self.export_manager = ExportManager(self)
-        self.error_handler = ErrorHandler(self)
-        self.performance = PerformanceOptimizer(self)
-        self.animator = AnimationManager(self.root)
-
-    def update_forecast_display(self):
-        """Determine forecast type and display it"""
-        forecast_type = self.forecast_type.get()
-        
-        if forecast_type == "hourly":
-            self.show_hourly_forecast()
-        
-    def load_models(self):
-        """Load all ML models"""
-        models = {}
-        
-        # Load with error handling
-        for model_name in ['linear_regression', 'random_forest', 'arima']:
-            try:
-                model_path = f'models/{model_name}_model.pkl'
-                if os.path.exists(model_path):
-                    models[model_name] = joblib.load(model_path)
-            except Exception as e:
-                print(f"Failed to load {model_name}: {e}")
-                
-        return models
-    
-    def create_current_weather_panel(self, parent):
-        current_frame = ttk.LabelFrame(parent, text="Current Conditions", padding="20")
-        current_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-
-        self.temp_label = ttk.Label(current_frame, text="--°F", font=('Arial', 48, 'bold'))
-        self.temp_label.grid(row=0, column=0, columnspan=2)
-
-        self.conditions_label = ttk.Label(current_frame, text="--", font=('Arial', 18))
-        self.conditions_label.grid(row=1, column=0, columnspan=2, pady=10)
-
-        # Create and store other labels too:
-        self.humidity_label = ttk.Label(current_frame, text="--")
-        self.pressure_label = ttk.Label(current_frame, text="--")
-        self.wind_label = ttk.Label(current_frame, text="--")
-        self.feels_like_label = ttk.Label(current_frame, text="--")
-
-        ttk.Label(current_frame, text="Humidity:").grid(row=2, column=0, sticky="e")
-        self.humidity_label.grid(row=2, column=1, sticky="w")
-
-        ttk.Label(current_frame, text="Pressure:").grid(row=3, column=0, sticky="e")
-        self.pressure_label.grid(row=3, column=1, sticky="w")
-
-        ttk.Label(current_frame, text="Wind:").grid(row=4, column=0, sticky="e")
-        self.wind_label.grid(row=4, column=1, sticky="w")
-
-        ttk.Label(current_frame, text="Feels Like:").grid(row=5, column=0, sticky="e")
-        self.feels_like_label.grid(row=5, column=1, sticky="w")
-
-
-    def load_initial_data(self):
-        current = self.data_manager.fetch_current_weather()
-        if current:
-            self.update_current_weather()
-            # self.update_forecast_display()
-
-    def start_update_cycles(self):
-        pass
-    def update_current_weather(self):
-        try:
-            current = self.data_manager.fetch_current_weather()
-            if current:
-                self.temp_label.config(text=f"{current.temperature:.0f}°F")
-                self.conditions_label.config(text=current.conditions)
-                self.humidity_label.config(text=f"{current.humidity:.0f}%")
-                self.pressure_label.config(text=f"{current.pressure:.2f} in")
-                self.wind_label.config(text=f"{current.wind_speed:.0f} mph")
-                self.feels_like_label.config(text=f"{current.temperature:.0f}°F")
-                self.update_label.config(text=f"Last updated: {datetime.now().strftime('%I:%M %p')}")
-                self.update_charts()
-        except Exception as e:
-            print("Weather update failed:", e)
-    
-    def initialize(self):
-        """Initialize application"""
-        # Setup UI
-        self.setup_ui()
-        
-        # Load initial data
-        self.load_initial_data()
-        
-        # Start update cycles
-        self.start_update_cycles()
-        
-        # Show welcome
-        self.root.after(100, self.show_welcome)
-        
-    def create_forecast_tab(self):
-        return ttk.Frame(self.notebook)
-
-    def create_maps_tab(self):
-        return ttk.Frame(self.notebook)
-
-    def create_alerts_tab(self):
-        return ttk.Frame(self.notebook)
-
-    def create_settings_tab(self):
-        return ttk.Frame(self.notebook)
-    
-    def setup_ui(self):
-        """Create complete UI"""
-        # Main container with tabs
-        self.notebook = ttk.Notebook(self.root)
-        self.notebook.pack(fill='both', expand=True)
-        
-        # Dashboard tab
-        self.dashboard = self.create_dashboard()
-        self.notebook.add(self.dashboard, text="Dashboard")
-        
-        # Detailed forecast tab
-        self.forecast_tab = self.create_forecast_tab()
-        self.notebook.add(self.forecast_tab, text="Detailed Forecast")
-        
-        # Maps tab
-        self.maps_tab = self.create_maps_tab()
-        self.notebook.add(self.maps_tab, text="Weather Maps")
-        
-        # Alerts tab
-        self.alerts_tab = self.create_alerts_tab()
-        self.notebook.add(self.alerts_tab, text="Alerts")
-        
-        # Settings tab
-        self.settings_tab = self.create_settings_tab()
-        self.notebook.add(self.settings_tab, text="Settings")
-        
-        self.create_current_weather_panel(self.dashboard)
-
-        # Status bar
-        # self.create_status_bar()
-        
-    def create_dashboard(self):
-        """Create main dashboard"""
-        dashboard = ttk.Frame(self.notebook)
-        
-        # Current weather card
-        current_frame = self.modern_ui.create_modern_card(
-            dashboard, "Current Weather", None
-        )
-        current_frame.pack(side='left', fill='both', expand=True, padx=10, pady=10)
-        
-        # Quick forecast
-        forecast_frame = self.modern_ui.create_modern_card(
-            dashboard, "Quick Forecast", None
-        )
-        forecast_frame.pack(side='right', fill='both', expand=True, padx=10, pady=10)
-        
-        return dashboard
-    
-    def show_welcome(self):
-        """Show welcome message"""
-        welcome = tk.Toplevel(self.root)
-        welcome.title("Welcome")
-        welcome.geometry("400x200")
-        
-        ttk.Label(welcome, text="Welcome to Weather Predictor Pro!",
-                 font=('Arial', 16, 'bold')).pack(pady=20)
-        
-        ttk.Label(welcome, text="Your advanced weather forecasting companion",
-                 font=('Arial', 12)).pack()
-        
-        ttk.Button(welcome, text="Get Started",
-                  command=welcome.destroy).pack(pady=20)
-        
-        # Center on screen
-        welcome.transient(self.root)
-        welcome.grab_set()
-        
-    def run(self):
-        """Run the application"""
-        self.root.mainloop()
-
-# Create and run the application
 if __name__ == "__main__":
-    app = WeatherPredictorPro()
-    app.run()
-# Best Practices Summary:
-# python
-# class WeatherAppBestPractices:
-#     """Summary of best practices for weather applications"""
-    
-#     @staticmethod
-#     def ui_design():
-#         return {
-#             "Clarity": "Show most important info prominently",
-#             "Responsiveness": "Update smoothly without freezing",
-#             "Accessibility": "Use clear fonts and good contrast",
-#             "Consistency": "Maintain consistent design language",
-#             "Feedback": "Always show system status"
-#         }
-    
-#     @staticmethod
-#     def data_handling():
-#         return {
-#             "Caching": "Cache data to reduce API calls",
-#             "Validation": "Validate all data before display",
-#             "Error Handling": "Gracefully handle missing data",
-#             "Updates": "Balance freshness with performance",
-#             "Storage": "Store historical data efficiently"
-#         }
-    
-#     @staticmethod
-#     def predictions():
-#         return {
-#             "Uncertainty": "Always show confidence levels",
-#             "Multiple Models": "Use ensemble for better accuracy",
-#             "Validation": "Continuously validate predictions",
-#             "Explanation": "Help users understand predictions",
-#             "Limitations": "Be clear about forecast limits"
-#         }
-
-
-# # Run the application
-# if __name__ == "__main__":
-#     root = tk.Tk()
-#     app = WeatherPredictorApp(root)
-#     root.mainloop()
+    root = tk.Tk()
+    app = WeatherPredictorApp(root)
+    root.mainloop()
