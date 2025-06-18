@@ -12,6 +12,7 @@ import joblib
 import os
 
 @dataclass
+# Defines a structured record for current weather conditions (temp, humidity, etc.).
 class WeatherData:
     """Data class for weather information"""
     timestamp: datetime
@@ -23,6 +24,7 @@ class WeatherData:
     conditions: str
     
 @dataclass
+# Defines a record for predicted future weather, including confidence and temperature range.
 class Forecast:
     """Data class for weather forecast"""
     timestamp: datetime
@@ -35,6 +37,7 @@ class Forecast:
     confidence: float
 
 class WeatherDataManager:
+    
     """Manages weather data collection and storage"""
     
     def __init__(self):
@@ -45,7 +48,7 @@ class WeatherDataManager:
         
     def fetch_current_weather(self) -> Optional[WeatherData]:
         """Fetch current weather data"""
-        # Simulate API call
+        # Simulate API call using np.random to generate weather data
         try:
             current = WeatherData(
                 timestamp=datetime.now(),
@@ -68,7 +71,7 @@ class WeatherDataManager:
         end_time = datetime.now()
         start_time = end_time - timedelta(hours=hours)
         
-        # Simulate historical data
+        # Simulate historical data for plotting trends over the past 24 hours
         timestamps = pd.date_range(start=start_time, end=end_time, freq='H')
         data = {
             'timestamp': timestamps,
@@ -83,6 +86,7 @@ class WeatherDataManager:
 
 class PredictionEngine:
     """Handles all prediction operations"""
+    # Handles forcasting using ensemble modeling
     
     def __init__(self, models: Dict):
         self.models = models
@@ -90,44 +94,29 @@ class PredictionEngine:
         
     def predict_ensemble(self, features: pd.DataFrame, horizon: int) -> List[Forecast]:
         """Make ensemble predictions"""
-        # predictions = []
-        model_predictions = {}
-        
-        # for i in range(horizon):
-        #     # Get predictions from each model
-        #     model_predictions = {}
+        predictions = []
+        # Generates fake predictions using multiple “models” (linear, rf, arima) 
+        # and combines them with weighted averaging. Includes simulated confidence based on variance.
+        for i in range(horizon):
+            # Get predictions from each model
+            model_predictions = {}
             
-        #     for name, model in self.models.items():
-        #         if name in self.ensemble_weights:
-        #             # Make prediction (simplified)
-        #             pred = 70 + 10 * np.sin((i + 12) * np.pi / 12) + np.random.normal(0, 2)
-        #             model_predictions[name] = pred
+            for name, model in self.models.items():
+                if name in self.ensemble_weights:
+                    # Make prediction (simplified)
+                    pred = 70 + 10 * np.sin((i + 12) * np.pi / 12) + np.random.normal(0, 2)
+                    model_predictions[name] = pred
             
-        #     # Weighted average
-        #     ensemble_pred = sum(
-        #         self.ensemble_weights[name] * pred 
-        #         for name, pred in model_predictions.items()
-        #     )
-            
-        #     # Calculate confidence (simplified)
-        #     variance = np.var(list(model_predictions.values()))
-        #     confidence = max(0.5, 1 - variance / 10)
-        for name, i in self.models.items():
-            if name in self.ensemble_weights:
-                pred = 70 + 10 * np.sin((i + 12) * np.pi / 12) + np.random.normal(0, 2)
-                model_predictions[name] = pred
-
-    # If no model predictions, fall back to default
-        if not model_predictions:
-            ensemble_pred = 70 + 10 * np.sin((i + 12) * np.pi / 12) + np.random.normal(0, 2)
-            confidence = 0.75
-        else:
+            # Weighted average
             ensemble_pred = sum(
                 self.ensemble_weights[name] * pred 
                 for name, pred in model_predictions.items()
             )
+            
+            # Calculate confidence (simplified)
             variance = np.var(list(model_predictions.values()))
             confidence = max(0.5, 1 - variance / 10)
+            
             # Create forecast
             forecast = Forecast(
                 timestamp=datetime.now() + timedelta(hours=i),
@@ -140,9 +129,9 @@ class PredictionEngine:
                 confidence=confidence
             )
             
-            model_predictions.append(forecast)
+            predictions.append(forecast)
         
-        return model_predictions
+        return predictions
 
 class WeatherPredictorApp:
     """Main application class"""
@@ -164,6 +153,10 @@ class WeatherPredictorApp:
         
         # Start data updates
         self.update_current_weather()
+
+        self.alert_system = WeatherAlertSystem()  # Create the alert system
+        self.alert_widget = AlertWidget(self.root, self.alert_system)  # Create the UI widget
+        self.alert_widget.grid(row=4, column=0, columnspan=2, sticky='ew', padx=10, pady=10)
         
     def setup_styles(self):
         """Configure application styling"""
@@ -203,6 +196,11 @@ class WeatherPredictorApp:
         self.create_forecast_panel(main_container)
         self.create_charts_panel(main_container)
         self.create_control_panel(main_container)
+
+        #  Add alerts widget here
+        # self.alert_system = WeatherAlertSystem()
+        # self.alert_widget = AlertWidget(main_container, self.alert_system)
+        # self.alert_widget.grid(row=4, column=0, columnspan=2, sticky='ew', padx=10, pady=10)
         
     def create_header(self, parent):
         """Create application header"""
@@ -369,7 +367,12 @@ class WeatherPredictorApp:
     def update_forecast_display(self):
         """Update forecast based on selected type"""
         forecast_type = self.forecast_type.get()
-        
+        forecasts = self.prediction_engine.predict_ensemble(None, 24)
+
+        # 🔔 Check for alerts
+        if self.data_manager.current_data:
+            self.alert_system.check_conditions(self.data_manager.current_data, forecasts)
+
         if forecast_type == "hourly":
             self.show_hourly_forecast()
         elif forecast_type == "daily":
@@ -384,121 +387,6 @@ class WeatherPredictorApp:
         
         # Get predictions
         forecasts = self.prediction_engine.predict_ensemble(None, 24)
-        
-        # Display parameters
-        card_width = 80
-        card_height = 250
-        card_spacing = 10
-        y_offset = 10
-        
-        # Create forecast cards
-        for i, forecast in enumerate(forecasts[:24]):  # 24 hours
-            x = i * (card_width + card_spacing) + card_spacing
-            
-            # Card background
-            self.forecast_canvas.create_rectangle(
-                x, y_offset, x + card_width, y_offset + card_height,
-                fill='white', outline='#ddd'
-            )
-            
-            # Time
-            time_text = forecast.timestamp.strftime('%I %p')
-            self.forecast_canvas.create_text(
-                x + card_width/2, y_offset + 20,
-                text=time_text, font=('Arial', 10, 'bold')
-            )
-            
-            # Temperature
-            self.forecast_canvas.create_text(
-                x + card_width/2, y_offset + 60,
-                text=f"{forecast.temperature:.0f}°",
-                font=('Arial', 16, 'bold'), fill=self.colors['primary']
-            )
-            
-            # Confidence bar
-            conf_height = forecast.confidence * 100
-            self.forecast_canvas.create_rectangle(
-                x + 10, y_offset + 100,
-                x + 20, y_offset + 100 + conf_height,
-                fill=self.colors['success'], outline=''
-            )
-            
-            # Precipitation chance
-            if forecast.precipitation_chance > 0.1:
-                self.forecast_canvas.create_text(
-                    x + card_width/2, y_offset + 180,
-                    text=f"{forecast.precipitation_chance:.0%}",
-                    font=('Arial', 10), fill=self.colors['primary']
-                )
-        
-        # Update scroll region
-        self.forecast_canvas.configure(scrollregion=self.forecast_canvas.bbox('all'))
-
-    def show_daily_forecast(self):
-        """Display hourly forecast"""
-        # Clear canvas
-        self.forecast_canvas.delete('all')
-        
-        # Get predictions
-        forecasts = self.prediction_engine.predict_ensemble(None, 24)
-        
-        # Display parameters
-        card_width = 80
-        card_height = 250
-        card_spacing = 10
-        y_offset = 10
-        
-        # Create forecast cards
-        for i, forecast in enumerate(forecasts[:24]):  # 24 hours
-            x = i * (card_width + card_spacing) + card_spacing
-            
-            # Card background
-            self.forecast_canvas.create_rectangle(
-                x, y_offset, x + card_width, y_offset + card_height,
-                fill='white', outline='#ddd'
-            )
-            
-            # Time
-            time_text = forecast.timestamp.strftime('%I %p')
-            self.forecast_canvas.create_text(
-                x + card_width/2, y_offset + 20,
-                text=time_text, font=('Arial', 10, 'bold')
-            )
-            
-            # Temperature
-            self.forecast_canvas.create_text(
-                x + card_width/2, y_offset + 60,
-                text=f"{forecast.temperature:.0f}°",
-                font=('Arial', 16, 'bold'), fill=self.colors['primary']
-            )
-            
-            # Confidence bar
-            conf_height = forecast.confidence * 100
-            self.forecast_canvas.create_rectangle(
-                x + 10, y_offset + 100,
-                x + 20, y_offset + 100 + conf_height,
-                fill=self.colors['success'], outline=''
-            )
-            
-            # Precipitation chance
-            if forecast.precipitation_chance > 0.1:
-                self.forecast_canvas.create_text(
-                    x + card_width/2, y_offset + 180,
-                    text=f"{forecast.precipitation_chance:.0%}",
-                    font=('Arial', 10), fill=self.colors['primary']
-                )
-        
-        # Update scroll region
-        self.forecast_canvas.configure(scrollregion=self.forecast_canvas.bbox('all'))
-
-    def show_weekly_forecast(self):
-        """Display hourly forecast"""
-        # Clear canvas
-        self.forecast_canvas.delete('all')
-        
-        # Get predictions
-        forecasts = self.prediction_engine.predict_ensemble(None, 24)
-        print(forecasts[0].temperature)
         
         # Display parameters
         card_width = 80
@@ -663,6 +551,13 @@ class SettingsDialog:
         # ...
         self.dialog.destroy()
 
+@dataclass
+class WeatherAlert:
+    type: str
+    severity: str  # INFO, WARNING, CRITICAL
+    message: str
+    timestamp: datetime
+
 class WeatherAlertSystem:
     """Manages weather alerts and notifications"""
     
@@ -716,12 +611,6 @@ class WeatherAlertSystem:
         """Register alert callback"""
         self.alert_callbacks.append(callback)
 
-@dataclass
-class WeatherAlert:
-    type: str
-    severity: str  # INFO, WARNING, CRITICAL
-    message: str
-    timestamp: datetime
 
 class AlertWidget(ttk.Frame):
     """Widget for displaying weather alerts"""
@@ -1182,6 +1071,9 @@ class ExportDialog:
            
         messagebox.showinfo("Success", f"Complete package saved to {zip_filename}")
 
+
+
+# Run the application
 if __name__ == "__main__":
     root = tk.Tk()
     app = WeatherPredictorApp(root)
