@@ -112,7 +112,7 @@ class PredictionEngine:
         #     # Calculate confidence (simplified)
         #     variance = np.var(list(model_predictions.values()))
         #     confidence = max(0.5, 1 - variance / 10)
-        for name, model in self.models.items():
+        for name, i in self.models.items():
             if name in self.ensemble_weights:
                 pred = 70 + 10 * np.sin((i + 12) * np.pi / 12) + np.random.normal(0, 2)
                 model_predictions[name] = pred
