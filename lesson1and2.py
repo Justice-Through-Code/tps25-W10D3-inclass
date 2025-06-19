@@ -147,6 +147,8 @@ class WeatherPredictorApp:
         # Initialize components
         self.data_manager = WeatherDataManager()
         self.prediction_engine = PredictionEngine({})  # Load models here
+        self.location_manager = LocationManager()
+        self.export_manager = ExportManager(self)
         
         # Setup UI
         self.setup_ui()
@@ -196,6 +198,7 @@ class WeatherPredictorApp:
         self.create_forecast_panel(main_container)
         self.create_charts_panel(main_container)
         self.create_control_panel(main_container)
+        
 
         #  Add alerts widget here
         # self.alert_system = WeatherAlertSystem()
@@ -246,6 +249,9 @@ class WeatherPredictorApp:
             label = ttk.Label(current_frame, text="--")
             label.grid(row=i+2, column=1, sticky='w')
             setattr(self, attr_name, label)
+
+    def open_export_dialog(self):
+        ExportDialog(self.root, self.export_manager)
     
     def create_forecast_panel(self, parent):
         """Create forecast display"""
@@ -275,6 +281,9 @@ class WeatherPredictorApp:
         scrollbar.pack(fill='x')
         self.forecast_canvas.configure(xscrollcommand=scrollbar.set)
         
+    def on_location_selected(self, location):
+        print(f"Location selected: {location.name}")
+
     def create_charts_panel(self, parent):
         """Create charts section"""
         charts_frame = ttk.LabelFrame(parent, text="Trends", padding="10")
@@ -284,6 +293,17 @@ class WeatherPredictorApp:
         # Chart notebook
         self.chart_notebook = ttk.Notebook(charts_frame)
         self.chart_notebook.pack(fill='both', expand=True)
+
+        self.location_selector_frame = ttk.Frame(self.chart_notebook)
+        self.chart_notebook.add(self.location_selector_frame, text="Locations")
+
+        # Create the LocationSelector inside this tab
+        self.location_selector = LocationSelector(
+            self.location_selector_frame,
+            self.location_manager,
+            self.on_location_selected
+        )
+        self.location_selector.pack(fill='both', expand=True, padx=10, pady=10)
         
         # Temperature trend
         self.temp_chart_frame = ttk.Frame(self.chart_notebook)
@@ -315,6 +335,8 @@ class WeatherPredictorApp:
         ttk.Button(control_frame, text="Settings", 
                   command=self.show_settings).pack(side='right', padx=5)
         
+        ttk.Button(control_frame, text="Export", command=self.open_export_dialog).pack(side='right', padx=5)
+
         # Status
         self.status_label = ttk.Label(control_frame, text="Ready", 
                                      foreground=self.colors['success'])

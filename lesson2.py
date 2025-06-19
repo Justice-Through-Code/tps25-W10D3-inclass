@@ -11,6 +11,13 @@ import queue
 import joblib
 import os
 
+@dataclass
+class WeatherAlert:
+    type: str
+    severity: str  # INFO, WARNING, CRITICAL
+    message: str
+    timestamp: datetime
+
 class WeatherAlertSystem:
     """Manages weather alerts and notifications"""
     
@@ -64,12 +71,6 @@ class WeatherAlertSystem:
         """Register alert callback"""
         self.alert_callbacks.append(callback)
 
-@dataclass
-class WeatherAlert:
-    type: str
-    severity: str  # INFO, WARNING, CRITICAL
-    message: str
-    timestamp: datetime
 
 class AlertWidget(ttk.Frame):
     """Widget for displaying weather alerts"""
@@ -515,9 +516,6 @@ class ExportDialog:
                 
                 csv_file = self.export_manager.export_data_csv()
                 zipf.write(csv_file, "forecast_data.csv")
-# Continue
-# Edit
-# python
                 os.remove(csv_file)
                
                # Write report
